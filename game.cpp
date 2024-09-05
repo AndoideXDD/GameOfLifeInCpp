@@ -9,7 +9,8 @@
 
  
 internal void 
-preparing_simulation(Input* input, u16*& grid, bool& endedPreparetion, bool& running, int& rows, int& columns, Render_State& render_state, bool& rowsSeted){
+preparing_simulation(Input* input, u16*& grid, bool& endedPreparetion, bool& running, int& rows, int& columns, Render_State& render_state, bool& rowsSeted,
+	bool& camera){
 	clear_screen(0, render_state);
 	int amountTosSum = 100;
 	if (pressed(BUTTON_ENTER)) {
@@ -24,6 +25,8 @@ preparing_simulation(Input* input, u16*& grid, bool& endedPreparetion, bool& run
 			for (int i = 0; i < dataLengh; i++) grid[i] = rand() % 2;
 		}
 	}
+	
+	// show instruccions of seting columns and rows
 
 	if (rowsSeted) {
 		draw_text("COLUMNS THAT YOU WANT", -50, 30, 1, 0xffffff, render_state);
@@ -39,7 +42,7 @@ preparing_simulation(Input* input, u16*& grid, bool& endedPreparetion, bool& run
 		draw_number(rows, 0, 0, 1, 0xffffff, render_state);
 	}
 	
-	
+	// leters w and s changing colors	
 
 	if (is_down(BUTTON_W)) {
 		draw_react(42, -3, 5, 5, 0xccccff, render_state);
@@ -73,25 +76,31 @@ preparing_simulation(Input* input, u16*& grid, bool& endedPreparetion, bool& run
 		draw_text("S", 40, -11, 1, 0x000000, render_state);
 	}
 
+	// show camera and set if you want it or not
+	if (pressed(BUTTON_R)) camera = !camera;
+	
+	
+	if (camera) draw_text("CAMERA IS ON TO CHANGE PRESS R", -50, -30, 0.6, 0xfc0606, render_state);
+	else draw_text("CAMERA IS OFF TO CHANGE PRESS R", -50, -30, 0.6, 0xffffff, render_state);
+
 	if (is_down(BUTTON_ESC)) running = false;
 
 }
 
 internal void
 procesNeighbours(const int rows, const int columns, u16*& grid,const int row,const int colum, Render_State& render_state, const float size) {
-	int neighbours = 0;
+	int neighbours = -1; // count them self
 	int newRow, newColum;
 	for (int y = -1; y < 2; y++) {
 		for (int x = -1; x < 2; x++) {
 			newColum = x + colum;
 			newRow = y + row;
-			if (!(newRow < 0 && newRow >= rows && newColum < 0 && newColum >= columns))
+			if (!(newRow < 0 || newRow >= rows || newColum < 0 || newColum >= columns))
 			{
 				if (grid[newColum + (newRow)*columns] == 1) neighbours++;
 			}
 		}
 	}
-	neighbours--;
 	if (neighbours < 2) grid[colum + row * columns] = 0; // die
 	else if (neighbours > 3) grid[colum + row * columns] = 0; // die
 	else if (neighbours == 3) { 
@@ -106,7 +115,7 @@ procesNeighbours(const int rows, const int columns, u16*& grid,const int row,con
 
 internal void 
 procesFrame(int rows, int columns, u16*& grid, Render_State& render_state) {
-	float size = 45.f / columns;
+	float size = 45.f / columns + 0.01;
 	for (int row = 0; row < rows; row++) {
 		for (int colum = 0; colum < columns; colum++) {
 			procesNeighbours(rows, columns, grid, row, colum, render_state, size);
@@ -116,7 +125,7 @@ procesFrame(int rows, int columns, u16*& grid, Render_State& render_state) {
 
 internal void 
 showGrid(u16*& grid, int rows, int columns, Render_State& render_state) {
-	float size = 45.f / columns;
+	float size = 45.f / columns + 0.01;
 	for (int row = 0; row < rows; row++) {
 		for (int colum = 0; colum < columns; colum++) {
 			if (grid[colum + row * columns] == 1) {

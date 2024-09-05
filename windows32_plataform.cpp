@@ -75,7 +75,7 @@ procesButtons (const MSG& mesage, Input& input) {
 
 internal void
 preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_begin_time, 
-	float& delta_time,const float performance_frequency, int& columns, int& rows, u16*& grid, bool& repeat) {
+	float& delta_time,const float performance_frequency, int& columns, int& rows, u16*& grid, bool& repeat, bool& camera) {
 	// preparing simulation  
 	bool rowsSeted = false;
 	running = true;
@@ -93,7 +93,7 @@ preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_b
 		while (PeekMessage(&mesage, window, 0, 0, PM_REMOVE))
 			procesButtons(mesage, input);
 		// Simulate
-		preparing_simulation(&input, grid, endedPreparetion, running, rows, columns, render_state, rowsSeted);
+		preparing_simulation(&input, grid, endedPreparetion, running, rows, columns, render_state, rowsSeted, camera);
 
 		// Render
 		StretchDIBits(hdc, 0, 0, render_state.width, render_state.height, 0, 0, render_state.width, render_state.height, render_state.memory, &render_state.bitmap_info, DIB_RGB_COLORS, SRCCOPY);
@@ -170,9 +170,9 @@ int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nSho
 	// prepare simulation
 	int columns = 0, rows = 0;
 	u16* grid = nullptr;
-	bool repeat = true;
+	bool repeat = true, camera = false;
 	while (repeat) {
-		preparingSimulation(input, window, hdc, frame_begin_time, delta_time, performance_frequency, columns, rows, grid, repeat);
+		preparingSimulation(input, window, hdc, frame_begin_time, delta_time, performance_frequency, columns, rows, grid, repeat, camera);
 		simulation(input, window, hdc, frame_begin_time, delta_time, performance_frequency, columns, rows, grid, repeat);
 	}
 	
