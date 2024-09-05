@@ -81,6 +81,7 @@ preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_b
 	running = true;
 	repeat = false;
 	bool endedPreparetion = false;
+	LARGE_INTEGER frame_end_time;
 	while (!endedPreparetion && running)
 	{
 		// Input 
@@ -97,7 +98,6 @@ preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_b
 		// Render
 		StretchDIBits(hdc, 0, 0, render_state.width, render_state.height, 0, 0, render_state.width, render_state.height, render_state.memory, &render_state.bitmap_info, DIB_RGB_COLORS, SRCCOPY);
 
-		LARGE_INTEGER frame_end_time;
 		QueryPerformanceCounter(&frame_end_time);
 		delta_time = (float)(frame_end_time.QuadPart - frame_begin_time.QuadPart) / performance_frequency;
 		frame_begin_time = frame_end_time;
@@ -107,6 +107,7 @@ preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_b
 internal void
 simulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_begin_time,
 	float& delta_time, const float performance_frequency, int& columns, int& rows, u16*& grid, bool& repeat) {
+	LARGE_INTEGER frame_end_time;
 	while (running)
 	{
 		// Input 
@@ -123,8 +124,6 @@ simulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_begin_time
 
 		// Render
 		StretchDIBits(hdc, 0, 0, render_state.width, render_state.height, 0, 0, render_state.width, render_state.height, render_state.memory, &render_state.bitmap_info, DIB_RGB_COLORS, SRCCOPY);
-
-		LARGE_INTEGER frame_end_time;
 		QueryPerformanceCounter(&frame_end_time);
 		delta_time = (float)(frame_end_time.QuadPart - frame_begin_time.QuadPart) / performance_frequency;
 		frame_begin_time = frame_end_time;
@@ -133,6 +132,11 @@ simulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_begin_time
 
 internal void 
 setWindow(HWND& window, WNDCLASS& window_class, HINSTANCE& hInstance) {
+	window_class.style = CS_HREDRAW | CS_VREDRAW;
+	window_class.lpszClassName = L"Game Of Life";
+	window_class.lpfnWndProc = window_callback;
+	// Register Class 
+	RegisterClass(&window_class);
 	ShowCursor(FALSE);
 	window = CreateWindow(window_class.lpszClassName, L"The name of the window", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 1280, 720, 0, 0, hInstance, 0);
 	{
@@ -144,33 +148,25 @@ setWindow(HWND& window, WNDCLASS& window_class, HINSTANCE& hInstance) {
 	}
 }
 
+internal float 
+setPerformanceFrequenci() {
+	LARGE_INTEGER perf;
+	QueryPerformanceFrequency(&perf);
+	return (float)perf.QuadPart;
+}
 
 int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nShowCmd) {
 	// create windows class 
 	WNDCLASS window_class = {};
-	window_class.style = CS_HREDRAW | CS_VREDRAW;
-	window_class.lpszClassName = L"Game Windows Class";
-	window_class.lpfnWndProc = window_callback;
-	// Register Class 
-	RegisterClass(&window_class);
 	// Create Window
 	HWND window;
 	setWindow(window, window_class, hInstance);
-	
 	HDC hdc = GetDC(window);
-
 	Input input = {};
-
 	float delta_time = 0.016666f;
 	LARGE_INTEGER frame_begin_time;
 	QueryPerformanceCounter(&frame_begin_time);
-
-	float performance_frequency;
-	{
-		LARGE_INTEGER perf;
-		QueryPerformanceFrequency(&perf);
-		performance_frequency = (float)perf.QuadPart;
-	}
+	float performance_frequency = setPerformanceFrequenci();
 	// prepare simulation
 	int columns = 0, rows = 0;
 	u16* grid = nullptr;
