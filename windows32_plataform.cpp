@@ -41,6 +41,38 @@ LRESULT CALLBACK  window_callback(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lPara
 	return result;
 }
 
+internal void 
+procesButtons (const MSG& mesage, Input& input) {
+	switch (mesage.message)
+	{
+	case WM_KEYUP:
+	case WM_KEYDOWN: {
+		u32 vk_code = (u32)mesage.wParam;
+		bool is_down = ((mesage.lParam & (1 << 31)) == 0);
+		switch (vk_code) {
+#define process_button(b, vk)\
+						case vk: { \
+						input.buttons[b].changed = is_down != input.buttons[b].is_down;\
+						input.buttons[b].is_down = is_down;\
+						} break;
+			process_button(BUTTON_F, 'F');
+			process_button(BUTTON_W, 'W');
+			process_button(BUTTON_S, 'S');
+			process_button(BUTTON_D, 'D');
+			process_button(BUTTON_A, 'A');
+			process_button(BUTTON_ENTER, VK_RETURN);
+			process_button(BUTTON_ESC, VK_ESCAPE);
+
+		}
+	} break;
+
+	default: {
+		TranslateMessage(&mesage);
+		DispatchMessage(&mesage);
+	}
+	}
+}
+
 internal void
 preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_begin_time, 
 	float& delta_time,const float performance_frequency, int& columns, int& rows, u16*& grid) {
@@ -57,35 +89,7 @@ preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_b
 			input.buttons[i].changed = false;
 
 		while (PeekMessage(&mesage, window, 0, 0, PM_REMOVE))
-		{
-			switch (mesage.message)
-			{
-			case WM_KEYUP:
-			case WM_KEYDOWN: {
-				u32 vk_code = (u32)mesage.wParam;
-				bool is_down = ((mesage.lParam & (1 << 31)) == 0);
-
-				switch (vk_code) {
-#define process_button(b, vk)\
-						case vk: { \
-						input.buttons[b].changed = is_down != input.buttons[b].is_down;\
-						input.buttons[b].is_down = is_down;\
-						} break;
-					process_button(BUTTON_W, 'W');
-					process_button(BUTTON_S, 'S');
-					process_button(BUTTON_ENTER, VK_RETURN);
-					process_button(BUTTON_ESC, VK_ESCAPE);
-
-				}
-			} break;
-
-			default: {
-				TranslateMessage(&mesage);
-				DispatchMessage(&mesage);
-			}
-			}
-
-		}
+			procesButtons(mesage, input);
 		// Simulate
 		preparing_simulation(&input, grid, endedPreparetion, running, rows, columns, render_state, rowsSeted);
 
@@ -99,6 +103,32 @@ preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_b
 	}
 }
 
+internal void
+simulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_begin_time,
+	float& delta_time, const float performance_frequency, int& columns, int& rows, u16*& grid) {
+	while (running)
+	{
+		// Input 
+		MSG mesage;
+
+		for (int i = 0; i < BUTTON_COUNT; i++)
+			input.buttons[i].changed = false;
+
+		while (PeekMessage(&mesage, window, 0, 0, PM_REMOVE))
+			procesButtons(mesage, input);
+		// Simulate
+
+		simulate_game(&input, delta_time, rows, columns, grid, running, render_state);
+
+		// Render
+		StretchDIBits(hdc, 0, 0, render_state.width, render_state.height, 0, 0, render_state.width, render_state.height, render_state.memory, &render_state.bitmap_info, DIB_RGB_COLORS, SRCCOPY);
+
+		LARGE_INTEGER frame_end_time;
+		QueryPerformanceCounter(&frame_end_time);
+		delta_time = (float)(frame_end_time.QuadPart - frame_begin_time.QuadPart) / performance_frequency;
+		frame_begin_time = frame_end_time;
+	}
+}
 
 int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nShowCmd) {
 	ShowCursor(FALSE);
@@ -137,58 +167,5 @@ int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nSho
 	int columns = 0, rows = 0;
 	u16* grid = nullptr;
 	preparingSimulation(input, window, hdc, frame_begin_time, delta_time, performance_frequency, columns, rows, grid);
-
-	while (running)
-	{
-		// Input 
-		MSG mesage;
-
-		for (int i = 0; i < BUTTON_COUNT; i++)
-			input.buttons[i].changed = false;
-
-		while (PeekMessage(&mesage, window, 0, 0, PM_REMOVE))
-		{
-			switch (mesage.message)
-			{
-				case WM_KEYUP:
-				case WM_KEYDOWN: {
-					u32 vk_code = (u32)mesage.wParam;
-					bool is_down = ((mesage.lParam & (1 << 31)) == 0);
-						
-					switch (vk_code){
-						#define process_button(b, vk)\
-						case vk: { \
-						input.buttons[b].changed = is_down != input.buttons[b].is_down;\
-						input.buttons[b].is_down = is_down;\
-						} break;
-						process_button(BUTTON_W, 'W');
-						process_button(BUTTON_S, 'S');
-						process_button(BUTTON_ENTER, VK_RETURN);
-						process_button(BUTTON_ESC, VK_ESCAPE);
-
-					}
-				} break;
-
-				default: {
-					TranslateMessage(&mesage);
-					DispatchMessage(&mesage);
-				} 
-			}
-			
-		}
-		// Simulate
-	 
-		simulate_game(&input, delta_time, rows, columns, grid, running, render_state);
-
-		// Render
-		StretchDIBits(hdc, 0, 0, render_state.width, render_state.height, 0, 0, render_state.width, render_state.height, render_state.memory, &render_state.bitmap_info, DIB_RGB_COLORS, SRCCOPY);
-		
-		LARGE_INTEGER frame_end_time;
-		QueryPerformanceCounter(&frame_end_time);
-		delta_time = (float)(frame_end_time.QuadPart - frame_begin_time.QuadPart) / performance_frequency;
-		frame_begin_time = frame_end_time;
-	}
-
-
-
+	simulation(input, window, hdc, frame_begin_time, delta_time, performance_frequency, columns, rows, grid);
 }

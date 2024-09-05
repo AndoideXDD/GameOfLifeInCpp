@@ -78,20 +78,11 @@ preparing_simulation(Input* input, u16*& grid, bool& endedPreparetion, bool& run
 }
 
 internal void
-procesNeighbours(const int rows, const int columns, u16*& grid,const int row,const int colum) {
+procesNeighbours(const int rows, const int columns, u16*& grid,const int row,const int colum, Render_State& render_state, const float size) {
 	int neighbours = 0;
 	int newRow, newColum;
 	for (int y = -1; y < 2; y++) {
 		for (int x = -1; x < 2; x++) {
-			/* Verison without borders ( and maybe bad )
-			if (row + y < 0) newRow = (row + y) + rows;
-			else if (row + y >= rows) newRow = abs(rows - row + y);
-			else newRow = row + y;
-			if (colum + x < 0) newColum = (row + y) + rows;
-			else if (colum + x >= columns) newColum = abs(columns - colum + x);
-			else newColum = colum + x;
-			if (grid[newColum + (newRow) * columns] == 1) neighbours++;
-			*/
 			newColum = x + colum;
 			newRow = y + row;
 			if (!(newRow < 0 && newRow >= rows && newColum < 0 && newColum >= columns))
@@ -103,15 +94,22 @@ procesNeighbours(const int rows, const int columns, u16*& grid,const int row,con
 	neighbours--;
 	if (neighbours < 2) grid[colum + row * columns] = 0; // die
 	else if (neighbours > 3) grid[colum + row * columns] = 0; // die
-	else if (neighbours == 3) grid[colum + row * columns] = 1; // new live
+	else if (neighbours == 3) { 
+		grid[colum + row * columns] = 1; // new live 
+		draw_react(float(colum) / columns * 160 - 80, float(row) / rows * 80 - 40, size, size, 0xffffff, render_state);
+	} else {
+		draw_react(float(colum)/columns*160 - 80, float(row)/rows * 80 - 40, size, size, 0xffffff, render_state);
+	}
 }
 
 
+
 internal void 
-procesFrame(int rows, int columns, u16*& grid) {
+procesFrame(int rows, int columns, u16*& grid, Render_State& render_state) {
+	float size = 45.f / columns;
 	for (int row = 0; row < rows; row++) {
 		for (int colum = 0; colum < columns; colum++) {
-			procesNeighbours(rows, columns, grid, row, colum);
+			procesNeighbours(rows, columns, grid, row, colum, render_state, size);
 		}
 	}
 }
@@ -132,12 +130,8 @@ internal void
 simulate_game(Input* input, float dt, int rows, int columns, u16*& grid, bool& running, Render_State& render_state) {
 	// the ability to freeze time pressing w
 	clear_screen(0, render_state);
-	if (!is_down(BUTTON_W)) {
-		procesFrame(rows, columns, grid);
-	}
-
-	showGrid(grid, rows, columns, render_state);
-
+	if (!is_down(BUTTON_F)) procesFrame(rows, columns, grid, render_state);
+	else showGrid(grid, rows, columns, render_state);
 	if (is_down(BUTTON_ESC)) running = false;
-	Sleep(100);
+	//Sleep(100);
 }
