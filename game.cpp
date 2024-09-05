@@ -127,11 +127,16 @@ showGrid(u16*& grid, int rows, int columns, Render_State& render_state) {
 }
 
 internal void
-simulate_game(Input* input, float dt, int rows, int columns, u16*& grid, bool& running, Render_State& render_state) {
+simulate_game(Input* input, float dt, int rows, int columns, u16*& grid, bool& running, Render_State& render_state, bool& repeat) {
 	// the ability to freeze time pressing w
+	if (is_down(BUTTON_R)) {
+		repeat = true;
+		running = false;
+	}
 	clear_screen(0, render_state);
 	if (!is_down(BUTTON_F)) procesFrame(rows, columns, grid, render_state);
 	else showGrid(grid, rows, columns, render_state);
 	if (is_down(BUTTON_ESC)) running = false;
+	
 	//Sleep(100);
 }

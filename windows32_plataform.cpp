@@ -31,7 +31,6 @@ LRESULT CALLBACK  window_callback(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lPara
 			render_state.bitmap_info.bmiHeader.biPlanes = 1;
 			render_state.bitmap_info.bmiHeader.biBitCount = 32;
 			render_state.bitmap_info.bmiHeader.biCompression = BI_RGB;
-		 
 		} break;
 		default: {
 			result = DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -50,16 +49,17 @@ procesButtons (const MSG& mesage, Input& input) {
 		u32 vk_code = (u32)mesage.wParam;
 		bool is_down = ((mesage.lParam & (1 << 31)) == 0);
 		switch (vk_code) {
-#define process_button(b, vk)\
-						case vk: { \
-						input.buttons[b].changed = is_down != input.buttons[b].is_down;\
-						input.buttons[b].is_down = is_down;\
-						} break;
+			#define process_button(b, vk)\
+				case vk: { \
+				input.buttons[b].changed = is_down != input.buttons[b].is_down;\
+				input.buttons[b].is_down = is_down;\
+				} break;
 			process_button(BUTTON_F, 'F');
 			process_button(BUTTON_W, 'W');
 			process_button(BUTTON_S, 'S');
 			process_button(BUTTON_D, 'D');
 			process_button(BUTTON_A, 'A');
+			process_button(BUTTON_R, 'R');
 			process_button(BUTTON_ENTER, VK_RETURN);
 			process_button(BUTTON_ESC, VK_ESCAPE);
 
@@ -75,10 +75,11 @@ procesButtons (const MSG& mesage, Input& input) {
 
 internal void
 preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_begin_time, 
-	float& delta_time,const float performance_frequency, int& columns, int& rows, u16*& grid) {
-	// preparing simulation 
+	float& delta_time,const float performance_frequency, int& columns, int& rows, u16*& grid, bool& repeat) {
+	// preparing simulation  
 	bool rowsSeted = false;
-	
+	running = true;
+	repeat = false;
 	bool endedPreparetion = false;
 	while (!endedPreparetion && running)
 	{
@@ -105,7 +106,7 @@ preparingSimulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_b
 
 internal void
 simulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_begin_time,
-	float& delta_time, const float performance_frequency, int& columns, int& rows, u16*& grid) {
+	float& delta_time, const float performance_frequency, int& columns, int& rows, u16*& grid, bool& repeat) {
 	while (running)
 	{
 		// Input 
@@ -118,7 +119,7 @@ simulation(Input& input, HWND& window, HDC& hdc, LARGE_INTEGER& frame_begin_time
 			procesButtons(mesage, input);
 		// Simulate
 
-		simulate_game(&input, delta_time, rows, columns, grid, running, render_state);
+		simulate_game(&input, delta_time, rows, columns, grid, running, render_state, repeat);
 
 		// Render
 		StretchDIBits(hdc, 0, 0, render_state.width, render_state.height, 0, 0, render_state.width, render_state.height, render_state.memory, &render_state.bitmap_info, DIB_RGB_COLORS, SRCCOPY);
@@ -173,6 +174,10 @@ int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nSho
 	// prepare simulation
 	int columns = 0, rows = 0;
 	u16* grid = nullptr;
-	preparingSimulation(input, window, hdc, frame_begin_time, delta_time, performance_frequency, columns, rows, grid);
-	simulation(input, window, hdc, frame_begin_time, delta_time, performance_frequency, columns, rows, grid);
+	bool repeat = true;
+	while (repeat) {
+		preparingSimulation(input, window, hdc, frame_begin_time, delta_time, performance_frequency, columns, rows, grid, repeat);
+		simulation(input, window, hdc, frame_begin_time, delta_time, performance_frequency, columns, rows, grid, repeat);
+	}
+	
 }
